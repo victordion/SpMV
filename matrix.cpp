@@ -24,7 +24,7 @@ struct Node{
 };
 
 struct NodeComparator {
-	NodeComparator(vector<Node> & all_nodes) { this->_all_nodes = all_nodes; }
+	NodeComparator(const vector<Node> & all_nodes) { this->_all_nodes = all_nodes; }
 	bool operator () (const int & i, const int & j) {
 		return _all_nodes[i].degree < _all_nodes[j].degree;
 	}
@@ -212,7 +212,7 @@ public:
 			for (int i = 0; i < row_size; i++){
 				for (int j = 0; j < column_size; j++){
 					//cout << i <<" " << j << endl;
-					ret[i] = ret[i] + entries[i][j] * vec[j];
+					ret[i] +=  entries[i][j] * vec[j];
 				}
 			}
 		}
@@ -238,22 +238,20 @@ public:
 		return ret;
 	}
 
-
-
-
 	vector<int> findRCMOrdering(){
-		vector<int> ret;
+		vector<int> ret(row_size + column_size);
+		int ret_idx = 0;
 
 		// indexing from 1 instead of 0
-		vector<Node> all_nodes(row_size + column_size + 1);
-		bool* visited = new bool[row_size + column_size + 1];
-		for (int i = 0; i < row_size + column_size + 1; i++){
+		vector<Node> all_nodes(row_size + column_size);
+		bool* visited = new bool[row_size + column_size];
+		for (int i = 0; i < row_size + column_size; i++){
 			visited[i] = false;
 		}
 
 		for (int k = 0; k < num_nonzeros; k++){
-			int n1 = row_idx_coo[k];
-			int n2 = column_idx_coo[k] + row_size;
+			int n1 = row_idx_coo[k] - 1;
+			int n2 = column_idx_coo[k] + row_size - 1;
 			all_nodes[n1].adjs.push_back(n2);
 			all_nodes[n1].degree++;
 			all_nodes[n2].adjs.push_back(n1); 
@@ -262,7 +260,7 @@ public:
 
 		int min_degree = INT_MAX;
 		int min_degree_node_id = 1;
-		for (int i = 1; i < row_size + column_size + 1; i++){
+		for (int i = 0; i < row_size + column_size; i++){
 			if (all_nodes[i].degree < min_degree){
 				min_degree = all_nodes[i].degree;
 				min_degree_node_id = i;
@@ -270,17 +268,17 @@ public:
 			if (min_degree == 0)
 				break;
 		}
-		ret.push_back(min_degree_node_id);
+		ret[ret_idx++] = min_degree_node_id;
 		visited[min_degree_node_id] = true;
 
 		vector<int> adj_nodes;
+		NodeComparator nodecomparator(all_nodes);
 
-		while (ret.size() != row_size + column_size){
+		while (ret_idx != row_size + column_size){
 
-			//cout << "Just pushed Node " << ret.back() << endl;
-
+		
 			adj_nodes.clear();
-			int curr_node_id = ret.back();
+			int curr_node_id = ret[ret_idx-1];
 			bool pushed = false;
 			for (int i = 0; i < all_nodes[curr_node_id].degree; i++){
 				int temp = all_nodes[curr_node_id].adjs[i];
@@ -291,15 +289,15 @@ public:
 			}
 			if (pushed == true){
 				//std::sort(adj_nodes.begin(), adj_nodes.end());
-				std::sort(adj_nodes.begin(), adj_nodes.end(), NodeComparator(all_nodes));
+				std::sort(adj_nodes.begin(), adj_nodes.end(), nodecomparator);
 				for (size_t i = 0; i < adj_nodes.size(); i++){
-					ret.push_back(adj_nodes[i]);
+					ret[ret_idx++] = adj_nodes[i];
 					visited[adj_nodes[i]] = true;
 				}
 			}
 			else{
 				min_degree = INT_MAX;
-				for (int i = 1; i < row_size + column_size + 1; i++){
+				for (int i = 0; i < row_size + column_size ; i++){
 					if (visited[i] == false && all_nodes[i].degree < min_degree ){
 						min_degree = all_nodes[i].degree;
 						min_degree_node_id = i;
@@ -307,12 +305,11 @@ public:
 					if (min_degree == 0)
 						break;
 				}
-				ret.push_back(min_degree_node_id);
+				ret[ret_idx++] = min_degree_node_id;
 				visited[min_degree_node_id] = true;
 			}
-
 		}
-		return ret;
+		return std::move(ret);
 	}
 };
 
@@ -320,7 +317,7 @@ int main(){
 
 
 	Matrix<double> mtx;
-	mtx.readFromFile("./matrices/rand5.mtx");
+	mtx.readFromFile("./matrices/rand4.mtx");
 	//mtx.showInfo();
 
 	Vector<double> vec;
