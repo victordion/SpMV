@@ -13,6 +13,7 @@
 #include <cmath>
 #include <limits.h>
 #include <algorithm>
+#include <queue>
 using namespace std;
 
 struct Node{
@@ -32,7 +33,7 @@ struct NodeComparator {
 	vector<Node> _all_nodes;
 };
 
-
+bool checkVectorFull(const vector<int> & _vec );
 
 template<typename T>
 class Vector{
@@ -285,9 +286,7 @@ public:
 				for(int j = 0; j < column_size; j++){
 					int new_r = row_perm[i] - 1;
 					int new_c = columns_perm[j] - 1;
-					if(abs(entries[new_r][new_c])>0.0000001){
-						ret.setEntry(i, j, entries[new_r][new_c]);
-					}
+					ret.setEntry(i, j, entries[new_r][new_c]);
 				}
 			}
 		}
@@ -308,7 +307,107 @@ public:
 		os.close();
 	}
 
-	void findRCMOrdering(vector<int> & row_perm, vector<int> & columns_perm){
+
+	int findUnvisitedLowestDegreeNode(const vector<Node> & all_nodes,  bool* & visited) const{
+		int min_degree = INT_MAX;
+		int min_degree_node_id = -1;
+		for (int i = 0; i < row_size + column_size; i++){
+			if (visited[i] == false && all_nodes[i].degree < min_degree){
+				min_degree = all_nodes[i].degree;
+				min_degree_node_id = i;
+			}
+			if (min_degree == 0)
+				break;
+		}
+		return min_degree_node_id;
+	}
+
+	void findRCM(vector<int> & row_perm, vector<int> & column_perm){
+		vector<int> ret;
+		queue<int> Q;
+
+		bool* visited = new bool[row_size + column_size];
+		for (int i = 0; i < row_size + column_size; i++){
+			visited[i] = false;
+		}
+		// indexing from 1 instead of 0
+		vector<Node> all_nodes(row_size + column_size);		
+		for (int k = 0; k < num_nonzeros; k++){
+			int n1 = row_idx_coo[k] - 1;
+			int n2 = column_idx_coo[k] + row_size - 1;
+			all_nodes[n1].adjs.push_back(n2);
+			all_nodes[n1].degree++;
+			all_nodes[n2].adjs.push_back(n1); 
+			all_nodes[n2].degree++;
+		}
+		NodeComparator nodecomparator(all_nodes);
+
+		while(ret.size() < row_size + column_size){
+			int newnode = findUnvisitedLowestDegreeNode(all_nodes, visited);
+			if(newnode == -1){
+				cout << "newnode = -1 is wrong" <<endl;
+				exit(1);
+			}
+			Q.push(newnode);
+			cout << "Foudn newnode " << newnode << endl;
+			//visited[newnode] = true;
+
+			while( Q.size() > 0){
+				//cout << "Q.size() "<<  Q.size() << endl;
+				int p = Q.front();
+				Q.pop();
+				ret.push_back(p);
+				//cout << "Pushed in ret " << p << " Q.size() "<<  Q.size() << endl;
+				visited[p] = true;
+				
+				vector<int> adjs;
+				adjs.clear();
+				for (int i = 0; i < all_nodes[p].degree; i++){
+					int adj = all_nodes[p].adjs[i];
+					if (visited[adj] == false){
+						adjs.push_back(adj);
+					}
+				}
+				std::sort(adjs.begin(), adjs.end(), nodecomparator);
+				for(int i = 0; i < adjs.size(); i++){
+					Q.push(adjs[i]);
+					//cout << "Pusing to Q " << adjs[i] << endl;
+				}
+
+			}
+		}
+
+		row_perm.clear();
+		column_perm.clear();
+		for(int i = 0; i < row_size + column_size; i++){
+			if(ret[i] > row_size - 1)
+				column_perm.push_back(ret[i] - row_size + 1);
+			else
+				row_perm.push_back(ret[i] + 1);
+
+		}
+		/*
+		cout << "Here shows the column permutation" << endl;
+		for(int i = 0; i < column_perm.size(); i++){
+			cout << column_perm[i] << endl;
+		}
+		
+		if(checkVectorFull(column_perm) == false){
+			throw("Returned column permutation not correct!");
+		}
+
+		cout << "Here shows the row permutation" << endl;
+		for(int i = 0; i < row_perm.size(); i++){
+			cout << row_perm[i] << endl;
+		}
+		if(checkVectorFull(row_perm) == false){
+			throw("Returned row permutation not correct!");
+		}
+		*/
+
+	}
+
+	void findRCMOrdering(vector<int> & row_perm, vector<int> & column_perm){
 		vector<int> ret(row_size + column_size);
 		int ret_idx = 0;
 
@@ -329,7 +428,7 @@ public:
 		}
 
 		int min_degree = INT_MAX;
-		int min_degree_node_id = 1;
+		int min_degree_node_id = 0;
 		for (int i = 0; i < row_size + column_size; i++){
 			if (all_nodes[i].degree < min_degree){
 				min_degree = all_nodes[i].degree;
@@ -340,6 +439,7 @@ public:
 		}
 		ret[ret_idx++] = min_degree_node_id;
 		visited[min_degree_node_id] = true;
+
 
 		vector<int> adj_nodes;
 		NodeComparator nodecomparator(all_nodes);
@@ -353,7 +453,7 @@ public:
 			for (int i = 0; i < all_nodes[curr_node_id].degree; i++){
 				int temp = all_nodes[curr_node_id].adjs[i];
 				if (visited[temp] == false){
-					adj_nodes.push_back(all_nodes[curr_node_id].adjs[i]);
+					adj_nodes.push_back(temp);
 					pushed = true;
 				}
 			}
@@ -381,30 +481,60 @@ public:
 		}
 
 		row_perm.clear();
-		columns_perm.clear();
+		column_perm.clear();
 		for(int i = 0; i < row_size + column_size; i++){
 			if(ret[i] > row_size - 1)
-				columns_perm.push_back(ret[i] - row_size + 1);
+				column_perm.push_back(ret[i] - row_size + 1);
 			else
 				row_perm.push_back(ret[i] + 1);
 
 		}
+
+		if(checkVectorFull(column_perm) == false){
+			throw("Returned column permutation not correct!");
+		}
+		if(checkVectorFull(row_perm) == false){
+			throw("Returned row permutation not correct!");
+		}
+
 		//return std::move(ret);
 	}
 };
+
+bool checkVectorFull(const vector<int> & _vec ){
+	vector<int> vec = _vec;
+	std::sort(vec.begin(), vec.end());
+	for(int i = 0 ; i < vec.size(); i++){
+		if(vec[i] != i+1){
+			cout << i+1 << " " << vec[i] << endl;
+			return false;
+		}
+	}
+	return true;
+}
 
 int main(int argc, char * argv[]){
 
 
 	Matrix<double> mtx;
-	string file;
+	string file = "./matrices/rand4.mtx";
 
-	mtx.readFromFile("./matrices/rand4.mtx");
+	for(int i = 0; i < argc; i++){
+		cout << "Argument " << i << " is " << argv[i] << endl;
+	}
+	
+	if(argc == 2){
+		file = argv[1];
+	}
+	cout << file << endl;
+	int a;
+	cin >> a;
+	mtx.readFromFile(file);
 	//mtx.showInfo();
 
 	Vector<double> vec;
 	vec.fillWithRandom(mtx.getColumnSize());
-	vec.displayContent();
+	//vec.displayContent();
 
 	//Vector<double> result1;
 
@@ -445,15 +575,18 @@ int main(int argc, char * argv[]){
 		vector<int> row_ordering, column_ordering;
 
 
-		mtx.findRCMOrdering(row_ordering, column_ordering);
+		mtx.findRCM(row_ordering, column_ordering);
 		
-		for(int i ; i < row_ordering.size(); i++){
-			cout << row_ordering[i] << endl;
-		}
+		// for(int i ; i < row_ordering.size(); i++){
+		// 	cout << row_ordering[i] << endl;
+		// }
+		// for(int i ; i < column_ordering.size(); i++){
+		// 	cout << column_ordering[i] << endl;
+		// }
 
 		Matrix<double> mtx_perm = mtx.getPermutedForm(row_ordering, column_ordering);
 		t6 = clock();
-		mtx_perm.writeToFile("./matrices/mtx_perm.mtx");
+		mtx_perm.writeToFile(file + ".perm");
 	}
 	catch (char const * ex){
 		cout << ex << endl;
