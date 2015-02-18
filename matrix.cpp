@@ -73,7 +73,7 @@ public:
 		elements = new T[new_size];
 	}
 
-	int getSize(){
+	int getSize () const{
 		return size;
 	}
 
@@ -87,7 +87,7 @@ public:
 		return *this;
 	}
 
-	T& operator[](int idx){
+	T& operator[](int idx) const{
 		if (idx > size){
 			cout << idx << " " << size << endl;
 			throw("Out of bound accessing vector");
@@ -120,12 +120,18 @@ public:
 
 template<typename T>
 class Matrix{
+	// note: the indexing of entries in the matrix starts from 1
+	// not zero!
 private:
-	T ** entries;
+	
 	int row_size;
 	int column_size;
 	int num_nonzeros;
 
+	// dense representation
+	T ** entries;
+
+	// coordination representation
 	int * row_idx_coo;
 	int * column_idx_coo;
 	T * entries_coo;
@@ -136,6 +142,7 @@ public:
 		num_nonzeros = 0;
 		row_size = 0;
 		column_size = 0;
+		entries = NULL;
 	}
 
 	~Matrix(){
@@ -152,6 +159,35 @@ public:
 		for (int i = 0; i < num_nonzeros; i++){
 			cout << "(" << row_idx_coo[i] << "," << column_idx_coo[i] << ") : " << entries_coo[i] << endl;
 		}
+	}
+
+	void setSize(const size_t & row_size, const size_t & column_size){
+		if(entries != NULL){
+			throw("Error setting size of matrix: already initialized!");
+		}
+		else{
+			this->row_size = row_size;
+			this->column_size = column_size; 
+			entries = new T*[row_size];
+			for (int i = 0; i < row_size; i++){
+				entries[i] = new T[column_size];
+			}
+
+			for (int i = 0; i < row_size; i++)
+				for (int j = 0; j < column_size; j++)
+					entries[i][j] = 0.0;
+		}
+	}
+
+	void setEntry(const int & r, const int & c, const T & data){
+		if(r < 0 || r >= row_size || c < 0 || c >= column_size){
+			cout << "row_size: " << row_size << " column_size: " << column_size << endl;
+			cout << "r: " << r << " c:" << c << endl;
+			throw("Error adding entry to matrix: index out of bound!");
+		}
+		else
+			entries[r][c] = data;
+
 	}
 
 	void readFromFile(string file){
@@ -190,17 +226,17 @@ public:
 
 				//cout << r << " " << c << " "<< e << endl;
 
-				entries[r - 1][c - 1] = e;
+				entries[r - 1][c - 1] = 1.0;
 				row_idx_coo[idx_coo] = r;
 				column_idx_coo[idx_coo] = c;
-				entries_coo[idx_coo] = e;
+				entries_coo[idx_coo] = 1.0;
 				++idx_coo;
 				//cout << idx_coo << endl;
 			}
 		}
 	}
 	//template<typename T>
-	Vector<T> multiplyVectorPlain(Vector<T> vec){
+	Vector<T> multiplyVectorPlain(const Vector<T> & vec){
 		Vector<T> ret;
 		if (column_size != vec.getSize()){
 			throw("matrix and vector size do not match!");
@@ -220,7 +256,7 @@ public:
 		return ret;
 	}
 
-	Vector<T> multiplyVectorCOO(Vector<T> vec){
+	Vector<T> multiplyVectorCOO(const Vector<T> & vec){
 		Vector<T> ret;
 		if (getColumnSize() != vec.getSize())
 			throw("matrix and vector size do not match!");
@@ -238,7 +274,41 @@ public:
 		return ret;
 	}
 
-	vector<int> findRCMOrdering(){
+	Matrix<T> getPermutedForm(const vector<int> & row_perm, const vector<int> & columns_perm){
+		Matrix<T> ret;
+		if(row_perm.size() != row_size || columns_perm.size() != column_size)
+			throw("Cannot Permute: size does not match!");
+		else{
+			
+			ret.setSize(row_size, column_size);
+			for(int i = 0; i < row_size; i++){
+				for(int j = 0; j < column_size; j++){
+					int new_r = row_perm[i] - 1;
+					int new_c = columns_perm[j] - 1;
+					if(abs(entries[new_r][new_c])>0.0000001){
+						ret.setEntry(i, j, entries[new_r][new_c]);
+					}
+				}
+			}
+		}
+		return ret;
+	}
+
+	void writeToFile(const string & file){
+		ofstream os;
+		os.open(file);
+		os << row_size << " " <<column_size << " " << num_nonzeros << endl;
+		for(int i = 0; i < row_size; i++){
+			for(int j = 0; j < column_size; j++){
+				if(abs(entries[i][j])>0.0000001){
+					os << i+1 << " " << j+1 << " " << entries[i][j] << endl;
+				}
+			}
+		}
+		os.close();
+	}
+
+	void findRCMOrdering(vector<int> & row_perm, vector<int> & columns_perm){
 		vector<int> ret(row_size + column_size);
 		int ret_idx = 0;
 
@@ -309,14 +379,26 @@ public:
 				visited[min_degree_node_id] = true;
 			}
 		}
-		return std::move(ret);
+
+		row_perm.clear();
+		columns_perm.clear();
+		for(int i = 0; i < row_size + column_size; i++){
+			if(ret[i] > row_size - 1)
+				columns_perm.push_back(ret[i] - row_size + 1);
+			else
+				row_perm.push_back(ret[i] + 1);
+
+		}
+		//return std::move(ret);
 	}
 };
 
-int main(){
+int main(int argc, char * argv[]){
 
 
 	Matrix<double> mtx;
+	string file;
+
 	mtx.readFromFile("./matrices/rand4.mtx");
 	//mtx.showInfo();
 
@@ -358,14 +440,25 @@ int main(){
 	cout << "Distance is ";
 	cout << result1.getEuclideanDistance(result2) << endl;
 
-	t5 = clock();
-	vector<int> ordering = mtx.findRCMOrdering();
-	t6 = clock();
-	for (size_t i = 0; i < ordering.size(); i++){
-		cout << ordering[i] << endl;
+	try{
+		t5 = clock();
+		vector<int> row_ordering, column_ordering;
+
+
+		mtx.findRCMOrdering(row_ordering, column_ordering);
+		
+		for(int i ; i < row_ordering.size(); i++){
+			cout << row_ordering[i] << endl;
+		}
+
+		Matrix<double> mtx_perm = mtx.getPermutedForm(row_ordering, column_ordering);
+		t6 = clock();
+		mtx_perm.writeToFile("./matrices/mtx_perm.mtx");
 	}
-	cout << ordering.size() << endl;
-	//result1.displayContent();
+	catch (char const * ex){
+		cout << ex << endl;
+	}
+
 	//int a;
 	//cin >>  a;
 	//result2.displayContent();
