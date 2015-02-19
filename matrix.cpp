@@ -420,98 +420,100 @@ public:
 
 	}
 
-	void findRCMOrdering(vector<int> & row_perm, vector<int> & column_perm){
-		vector<int> ret(row_size + column_size);
-		int ret_idx = 0;
+// 	void findRCMOrdering(vector<int> & row_perm, vector<int> & column_perm){
+// 		vector<int> ret(row_size + column_size);
+// 		int ret_idx = 0;
 
-		// indexing from 1 instead of 0
-		vector<Node> all_nodes(row_size + column_size);
-		bool* visited = new bool[row_size + column_size];
-		for (int i = 0; i < row_size + column_size; i++){
-			visited[i] = false;
-		}
+// 		// indexing from 1 instead of 0
+// 		vector<Node> all_nodes(row_size + column_size);
+// 		bool* visited = new bool[row_size + column_size];
+// 		for (int i = 0; i < row_size + column_size; i++){
+// 			visited[i] = false;
+// 		}
 
-		for (int k = 0; k < num_nonzeros; k++){
-			int n1 = row_idx_coo[k] - 1;
-			int n2 = column_idx_coo[k] + row_size - 1;
-			all_nodes[n1].adjs.push_back(n2);
-			all_nodes[n1].degree++;
-			all_nodes[n2].adjs.push_back(n1); 
-			all_nodes[n2].degree++;
-		}
+// 		for (int k = 0; k < num_nonzeros; k++){
+// 			int n1 = row_idx_coo[k] - 1;
+// 			int n2 = column_idx_coo[k] + row_size - 1;
+// 			all_nodes[n1].adjs.push_back(n2);
+// 			all_nodes[n1].degree++;
+// 			all_nodes[n2].adjs.push_back(n1); 
+// 			all_nodes[n2].degree++;
+// 		}
 
-		int min_degree = INT_MAX;
-		int min_degree_node_id = 0;
-		for (int i = 0; i < row_size + column_size; i++){
-			if (all_nodes[i].degree < min_degree){
-				min_degree = all_nodes[i].degree;
-				min_degree_node_id = i;
-			}
-			if (min_degree == 0)
-				break;
-		}
-		ret[ret_idx++] = min_degree_node_id;
-		visited[min_degree_node_id] = true;
+// 		int min_degree = INT_MAX;
+// 		int min_degree_node_id = 0;
+// 		for (int i = 0; i < row_size + column_size; i++){
+// 			if (all_nodes[i].degree < min_degree){
+// 				min_degree = all_nodes[i].degree;
+// 				min_degree_node_id = i;
+// 			}
+// 			if (min_degree == 0)
+// 				break;
+// 		}
+// 		ret[ret_idx++] = min_degree_node_id;
+// 		visited[min_degree_node_id] = true;
 
 
-		vector<int> adj_nodes;
-		NodeComparator nodecomparator(all_nodes);
+// 		vector<int> adj_nodes;
+// 		NodeComparator nodecomparator(all_nodes);
 
-		while (ret_idx != row_size + column_size){
+// 		while (ret_idx != row_size + column_size){
 
 		
-			adj_nodes.clear();
-			int curr_node_id = ret[ret_idx-1];
-			bool pushed = false;
-			for (int i = 0; i < all_nodes[curr_node_id].degree; i++){
-				int temp = all_nodes[curr_node_id].adjs[i];
-				if (visited[temp] == false){
-					adj_nodes.push_back(temp);
-					pushed = true;
-				}
-			}
-			if (pushed == true){
-				//std::sort(adj_nodes.begin(), adj_nodes.end());
-				std::sort(adj_nodes.begin(), adj_nodes.end(), nodecomparator);
-				for (size_t i = 0; i < adj_nodes.size(); i++){
-					ret[ret_idx++] = adj_nodes[i];
-					visited[adj_nodes[i]] = true;
-				}
-			}
-			else{
-				min_degree = INT_MAX;
-				for (int i = 0; i < row_size + column_size ; i++){
-					if (visited[i] == false && all_nodes[i].degree < min_degree ){
-						min_degree = all_nodes[i].degree;
-						min_degree_node_id = i;
-					}
-					if (min_degree == 0)
-						break;
-				}
-				ret[ret_idx++] = min_degree_node_id;
-				visited[min_degree_node_id] = true;
-			}
-		}
+// 			adj_nodes.clear();
+// 			int curr_node_id = ret[ret_idx-1];
+// 			bool pushed = false;
+// 			for (int i = 0; i < all_nodes[curr_node_id].degree; i++){
+// 				int temp = all_nodes[curr_node_id].adjs[i];
+// 				if (visited[temp] == false){
+// 					adj_nodes.push_back(temp);
+// 					pushed = true;
+// 				}
+// 			}
+// 			if (pushed == true){
+// 				//std::sort(adj_nodes.begin(), adj_nodes.end());
+// 				std::sort(adj_nodes.begin(), adj_nodes.end(), nodecomparator);
+// 				for (size_t i = 0; i < adj_nodes.size(); i++){
+// 					ret[ret_idx++] = adj_nodes[i];
+// 					visited[adj_nodes[i]] = true;
+// 				}
+// 			}
+// 			else{
+// 				min_degree = INT_MAX;
+// 				for (int i = 0; i < row_size + column_size ; i++){
+// 					if (visited[i] == false && all_nodes[i].degree < min_degree ){
+// 						min_degree = all_nodes[i].degree;
+// 						min_degree_node_id = i;
+// 					}
+// 					if (min_degree == 0)
+// 						break;
+// 				}
+// 				ret[ret_idx++] = min_degree_node_id;
+// 				visited[min_degree_node_id] = true;
+// 			}
+// 		}
 
-		row_perm.clear();
-		column_perm.clear();
-		for(int i = 0; i < row_size + column_size; i++){
-			if(ret[i] > row_size - 1)
-				column_perm.push_back(ret[i] - row_size + 1);
-			else
-				row_perm.push_back(ret[i] + 1);
+// 		row_perm.clear();
+// 		column_perm.clear();
+// 		for(int i = 0; i < row_size + column_size; i++){
+// 			if(ret[i] > row_size - 1)
+// 				column_perm.push_back(ret[i] - row_size + 1);
+// 			else
+// 				row_perm.push_back(ret[i] + 1);
 
-		}
+// 		}
 
-		if(checkVectorFull(column_perm) == false){
-			throw("Returned column permutation not correct!");
-		}
-		if(checkVectorFull(row_perm) == false){
-			throw("Returned row permutation not correct!");
-		}
+// 		if(checkVectorFull(column_perm) == false){
+// 			throw("Returned column permutation not correct!");
+// 		}
+// 		if(checkVectorFull(row_perm) == false){
+// 			throw("Returned row permutation not correct!");
+// 		}
 
-		//return std::move(ret);
-	}
+// 		//return std::move(ret);
+// 	}
+
+
 };
 
 bool checkVectorFull(const vector<int> & _vec ){
