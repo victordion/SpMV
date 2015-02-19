@@ -340,16 +340,27 @@ public:
 			all_nodes[n2].adjs.push_back(n1); 
 			all_nodes[n2].degree++;
 		}
+		// for (int id = 0; id < row_size + column_size; id++){
+		// 	cout << endl << "Node :" << id << " Degree: " << all_nodes[id].degree;
+		// 	cout << " Adjs: ";
+		// 	for (int i = 0; i < all_nodes[id].degree; ++i)
+		// 	{
+		// 		cout << all_nodes[id].adjs[i] << " ";
+		// 	}
+		// }
+
+
 		NodeComparator nodecomparator(all_nodes);
 
 		while(ret.size() < row_size + column_size){
 			int newnode = findUnvisitedLowestDegreeNode(all_nodes, visited);
-			if(newnode == -1){
-				cout << "newnode = -1 is wrong" <<endl;
-				exit(1);
-			}
+			// if(newnode == -1){
+			// 	//cout << "newnode = -1 is wrong" <<endl;
+			// 	exit(1);
+			// }
 			Q.push(newnode);
-			cout << "Foudn newnode " << newnode << endl;
+			visited[newnode] = true;
+			//cout << endl << "Found newnode: " << newnode << " Degree:" << all_nodes[newnode].degree ;
 			//visited[newnode] = true;
 
 			while( Q.size() > 0){
@@ -357,8 +368,8 @@ public:
 				int p = Q.front();
 				Q.pop();
 				ret.push_back(p);
-				//cout << "Pushed in ret " << p << " Q.size() "<<  Q.size() << endl;
-				visited[p] = true;
+				//cout << endl << "Pushed in ret " << p ;
+				
 				
 				vector<int> adjs;
 				adjs.clear();
@@ -369,9 +380,11 @@ public:
 					}
 				}
 				std::sort(adjs.begin(), adjs.end(), nodecomparator);
+				//cout << " found adjecencies: ";
 				for(int i = 0; i < adjs.size(); i++){
 					Q.push(adjs[i]);
-					//cout << "Pusing to Q " << adjs[i] << endl;
+					visited[adjs[i]] = true;
+					//cout <<  adjs[i] << " ";
 				}
 
 			}
@@ -386,24 +399,24 @@ public:
 				row_perm.push_back(ret[i] + 1);
 
 		}
-		/*
-		cout << "Here shows the column permutation" << endl;
-		for(int i = 0; i < column_perm.size(); i++){
-			cout << column_perm[i] << endl;
-		}
 		
-		if(checkVectorFull(column_perm) == false){
-			throw("Returned column permutation not correct!");
-		}
+		// cout << "Here shows the column permutation" << endl;
+		// for(int i = 0; i < column_perm.size(); i++){
+		// 	cout << column_perm[i] << endl;
+		// }
+		
+		// if(checkVectorFull(column_perm) == false){
+		// 	throw("Returned column permutation not correct!");
+		// }
 
-		cout << "Here shows the row permutation" << endl;
-		for(int i = 0; i < row_perm.size(); i++){
-			cout << row_perm[i] << endl;
-		}
-		if(checkVectorFull(row_perm) == false){
-			throw("Returned row permutation not correct!");
-		}
-		*/
+		// cout << "Here shows the row permutation" << endl;
+		// for(int i = 0; i < row_perm.size(); i++){
+		// 	cout << row_perm[i] << endl;
+		// }
+		// if(checkVectorFull(row_perm) == false){
+		// 	throw("Returned row permutation not correct!");
+		// }
+		
 
 	}
 
@@ -507,6 +520,12 @@ bool checkVectorFull(const vector<int> & _vec ){
 	for(int i = 0 ; i < vec.size(); i++){
 		if(vec[i] != i+1){
 			cout << i+1 << " " << vec[i] << endl;
+
+					cout << "Here shows the column permutation" << endl;
+			for(int j = 0; j < vec.size(); j++){
+			cout << vec[j] << endl;
+		}
+
 			return false;
 		}
 	}
@@ -571,12 +590,12 @@ int main(int argc, char * argv[]){
 	cout << result1.getEuclideanDistance(result2) << endl;
 
 	try{
-		t5 = clock();
+		
 		vector<int> row_ordering, column_ordering;
 
-
+		t5 = clock();
 		mtx.findRCM(row_ordering, column_ordering);
-		
+		t6 = clock();
 		// for(int i ; i < row_ordering.size(); i++){
 		// 	cout << row_ordering[i] << endl;
 		// }
@@ -585,7 +604,7 @@ int main(int argc, char * argv[]){
 		// }
 
 		Matrix<double> mtx_perm = mtx.getPermutedForm(row_ordering, column_ordering);
-		t6 = clock();
+		
 		mtx_perm.writeToFile(file + ".perm");
 	}
 	catch (char const * ex){
