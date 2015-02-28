@@ -1,6 +1,7 @@
 // By Jianwei CUI
 // Date of Creation: Feb 16 2015
 // Matrix Vector Manipulation
+//
 #include <time.h>
 #include <iostream>
 #include <stdio.h>
@@ -125,17 +126,17 @@ class Matrix{
 	// not zero!
 private:
 	
-	int row_size;
-	int column_size;
-	int num_nonzeros;
+	int row_size = 0;
+	int column_size = 0;
+	int num_nonzeros = 0;
 
 	// dense representation
 	T ** entries;
 
 	// coordination representation
-	int * row_idx_coo;
-	int * column_idx_coo;
-	T * entries_coo;
+	int * row_idx_coo = NULL;
+	int * column_idx_coo = NULL;
+	T * entries_coo = NULL;
 
 public:
 
@@ -192,6 +193,21 @@ public:
 	}
 
 	void readFromFile(string file){
+		if(row_size > 0){
+			for(int i = 0; i < row_size; i++)
+				delete[] entries[i];
+			delete[] entries;
+		}
+		if(row_idx_coo != NULL){
+			delete[] row_idx_coo;
+		}
+		if(column_idx_coo != NULL){
+			delete[] column_idx_coo;
+		}
+		if(entries_coo != NULL){
+			delete[] entries_coo;
+		}
+
 		ifstream infile(file);
 		string line;
 		bool unitialized = true;
@@ -537,89 +553,96 @@ bool checkVectorFull(const vector<int> & _vec ){
 int main(int argc, char * argv[]){
 
 
-	Matrix<double> mtx;
-	string file = "./matrices/rand4.mtx";
-
-	for(int i = 0; i < argc; i++){
-		cout << "Argument " << i << " is " << argv[i] << endl;
-	}
 	
-	if(argc == 2){
-		file = argv[1];
-	}
-	cout << file << endl;
-	int a;
-	cin >> a;
-	mtx.readFromFile(file);
-	//mtx.showInfo();
+	vector<string> files = {
+	"./real_matrices/illc1033.mtx",
+	"./real_matrices/illc1850.mtx",
+	"./real_matrices/mcfe.mtx",
+	"./real_matrices/qh1484.mtx",
+	"./real_matrices/qh882.mtx",
+	"./real_matrices/rand1.mtx",
+	"./real_matrices/rand2.mtx",
+	"./real_matrices/rand3.mtx",
+	"./real_matrices/rand4.mtx",
+	"./real_matrices/well1033.mtx",
+	"./real_matrices/zenios.mtx"};
 
 	Vector<double> vec;
-	vec.fillWithRandom(mtx.getColumnSize());
-	//vec.displayContent();
+	
 
-	//Vector<double> result1;
+	for(string file : files){
+		cout << file <<"  " ;
+		Matrix<double> mtx;
+		mtx.readFromFile(file);
+		//mtx.showInfo();
 
-	clock_t t1;
-	clock_t t2;
-	clock_t t3;
-	clock_t t4;
-	clock_t t5;
-	clock_t t6;
-	Vector<double> result1, result2;
+		//vec.displayContent();
 
-	try{
-		t1 = clock();
-		result1 = mtx.multiplyVectorPlain(vec);
-		t2 = clock();
-		//result1.displayContent();
+		//Vector<double> result1;
+		vec.fillWithRandom(mtx.getColumnSize());
+		clock_t t1;
+		clock_t t2;
+		clock_t t3;
+		clock_t t4;
+		clock_t t5;
+		clock_t t6;
+		Vector<double> result1, result2;
+
+		try{
+			t1 = clock();
+			result1 = mtx.multiplyVectorPlain(vec);
+			t2 = clock();
+			//result1.displayContent();
+		}
+		catch (char const * ex){
+			cout << ex << endl;
+		}
+
+		try{
+			t3 = clock();
+			result2 = mtx.multiplyVectorCOO(vec);
+			t4 = clock();
+			//result1.displayContent();
+		}
+		catch (char const * ex){
+			cout << ex << endl;
+		}
+
+
+		//cout << "Distance is ";
+		//cout << result1.getEuclideanDistance(result2) << endl;
+
+		try{
+			
+			vector<int> row_ordering, column_ordering;
+
+			t5 = clock();
+			mtx.findRCM(row_ordering, column_ordering);
+			t6 = clock();
+			// for(int i ; i < row_ordering.size(); i++){
+			// 	cout << row_ordering[i] << endl;
+			// }
+			// for(int i ; i < column_ordering.size(); i++){
+			// 	cout << column_ordering[i] << endl;
+			// }
+
+			Matrix<double> mtx_perm = mtx.getPermutedForm(row_ordering, column_ordering);
+			
+			mtx_perm.writeToFile(file + ".perm");
+		}
+		catch (char const * ex){
+			cout << ex << endl;
+		}
+
+		//int a;
+		//cin >>  a;
+		//result2.displayContent();
+
+		//printf("%10.9f seconds elapsed.\n", (t2 - t1) / (double)CLOCKS_PER_SEC);
+		printf("%10.9f seconds elapsed.\n", (t4 - t3) / (double)CLOCKS_PER_SEC);
+		//printf("%10.9f seconds elapsed.\n", (t6 - t5) / (double)CLOCKS_PER_SEC);
+		//printf("CLOCKS_PER_SEC = %10.9f.\n", (double)CLOCKS_PER_SEC);
+
 	}
-	catch (char const * ex){
-		cout << ex << endl;
-	}
-
-	try{
-		t3 = clock();
-		result2 = mtx.multiplyVectorCOO(vec);
-		t4 = clock();
-		//result1.displayContent();
-	}
-	catch (char const * ex){
-		cout << ex << endl;
-	}
-
-
-	cout << "Distance is ";
-	cout << result1.getEuclideanDistance(result2) << endl;
-
-	try{
-		
-		vector<int> row_ordering, column_ordering;
-
-		t5 = clock();
-		mtx.findRCM(row_ordering, column_ordering);
-		t6 = clock();
-		// for(int i ; i < row_ordering.size(); i++){
-		// 	cout << row_ordering[i] << endl;
-		// }
-		// for(int i ; i < column_ordering.size(); i++){
-		// 	cout << column_ordering[i] << endl;
-		// }
-
-		Matrix<double> mtx_perm = mtx.getPermutedForm(row_ordering, column_ordering);
-		
-		mtx_perm.writeToFile(file + ".perm");
-	}
-	catch (char const * ex){
-		cout << ex << endl;
-	}
-
-	//int a;
-	//cin >>  a;
-	//result2.displayContent();
-
-	printf("%10.9f seconds elapsed.\n", (t2 - t1) / (double)CLOCKS_PER_SEC);
-	printf("%10.9f seconds elapsed.\n", (t4 - t3) / (double)CLOCKS_PER_SEC);
-	printf("%10.9f seconds elapsed.\n", (t6 - t5) / (double)CLOCKS_PER_SEC);
-	printf("CLOCKS_PER_SEC = %10.9f.\n", (double)CLOCKS_PER_SEC);
 	return 0;
 }
